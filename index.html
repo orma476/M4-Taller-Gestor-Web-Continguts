@@ -1,0 +1,552 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noticias RSS</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  
+
+  <style>
+
+.container {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .noticia {
+        width: 30%;
+        margin: 1.5%;
+        border: 1px solid #ccc;
+        padding: 10px;
+    }
+    .noticia img {
+        width: 100%;
+        height: auto;
+    }
+    #loader {
+        display: none;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 9999;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Estils per a la capa de cerca */
+        #search-container {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
+    #search-input {
+      width: 200px;
+      padding: 5px;
+    }
+
+    #search-button {
+      padding: 5px 10px;
+      background-color: #ddd;
+      border: none;
+      cursor: pointer;
+    }
+    /* Estil pel body */
+    body {
+      background-color: #ccc;
+    }
+    h2 {
+      font-size: 24px; 
+      font-weight: bold;
+     }
+
+    /* Estils per al banner */
+    #banner {
+      background-color: orange;
+      text-align: center;
+      color: white;
+      padding: 20px;
+      position: relative; /* Afegit */
+    }
+
+    /* Estils per als resultats de la cerca */
+    #search-results {
+      display: none;
+      margin-top: 20px;
+    }
+
+    /* Estils per a les notícies */
+    #noticias {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Cambiado a 3 columnas en lugar de 2 */
+  grid-gap: 20px; /* Espacio entre las columnas */
+}
+
+    #noticia {
+     width: calc(33,3% - 10px); /* El 20px es para tener en cuenta los márgenes */
+  margin-right: 20px;
+  float: left;
+      
+      float: left;
+      margin-right: 2%;
+      margin-bottom: 20px;
+      
+      }
+  
+
+
+    .noticia img {
+      width: 95%;
+      height: auto;
+    }
+
+    .descripcion {
+      font-family: Arial, sans-serif;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .leer-mas {
+      display: block;
+      margin-top: 10px;
+      text-align: center;
+      background-color: orange;
+      color: white;
+      border-radius: 8px;
+      width: 100px;
+      height: 30px;
+      font-weight: bold;
+    }
+    /* Estils per al footer */
+    footer {
+      background-color: orange;
+      height: 350px; 
+      color: #fff;
+      padding: 20px 0;
+      clear: both; /* Asegura que el footer salte a una nueva línea */
+    }
+    .footer-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .footer-links li {
+      margin-bottom: 10px;
+    }
+    .footer-links a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 24px; /* Tamaño de fuente ajustado */
+    }
+    .social-icons {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .social-icons li {
+      display: inline-block;
+      margin-left: 10px;
+    }
+    .social-icons a {
+      color: #fff; /* Color azul claro */
+      font-size: 48px; /* Tamaño de ícono aumentado */
+    }
+   #autor {
+  display: block;
+  text-align: center; /* Para centrar el texto */
+  font-size: 20px; /* Tamaño de fuente más grande */
+}
+.marquee {
+       width: 100%;
+       height: 50pc; 
+       background-color: #fff  ;  
+       padding: 20px; 
+}
+
+#image-layer {
+    width: 200px;
+    height: 200px;
+    background-color: #123456;
+    padding: 10px;
+    overflow: hidden;
+        }
+
+  #image-of-the-day {
+    max-width: 100%;
+    max-height: 70%;
+    display: block;
+    margin: 0 auto;
+  }
+
+  #image-title {
+    font-size: 16px;
+    color: white;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+#nom {
+    position: absolute; 
+    top: 50px; 
+    left: 30%; 
+}
+
+
+  </style>
+  
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function(){
+      //URL del archivo RSS
+      var url = new URL(window.location.href);
+      var rss = url.searchParams.get("rss");
+    // Obté el valor del paràmetre 'rss' de la URL
+      // Defineix la URL de les notícies RSS
+      var rssUrl = rss ? rss: 'https://www.ara.cat/rss/'; //
+
+     //var rssUrl = 'https://www.ara.cat/rss/';
+     //var rssUrl = "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada"; 
+      
+
+      // Función para eliminar etiquetas HTML
+      function stripHtml(html) {
+        var temporalDivElement = document.createElement("div");
+        temporalDivElement.innerHTML = html;
+        return temporalDivElement.textContent || temporalDivElement.innerText || "";
+      }
+
+      // Función para cargar y mostrar las noticias
+      function cargarNoticias() {
+        $.get(rssUrl, function(data){
+          $(data).find('item').each(function(index){
+                        // Limitar a 12 noticias
+            if(index >= 13) return false;
+            var title = $(this).find('title').text();
+            var description = $(this).find('description').html(); // Obtener todo el contenido HTML
+            var link = $(this).find('link').text();
+            
+            // Obtener los primeros 100 caracteres del texto
+            var descripcionCortada = stripHtml(description).substring(0, 200) + '...';
+
+            // Obtener la URL de la imagen de la etiqueta <media:content> si está disponible
+            var imgUrl = $(this).find('media\\:content').attr('url');
+
+            // Si la URL de la imagen no está en la etiqueta <media:content>, buscarla en la descripción
+            if (!imgUrl) {
+              $(description).find('img').each(function(){
+                imgUrl = $(this).attr('src');
+                return false; // Salir del bucle después de encontrar la primera imagen
+              });
+            }
+
+            // Crear y añadir la noticia al HTML
+            var newsItem = '<div class="noticia">';
+            newsItem += '<h2>' + title + '</h2>';
+            if (imgUrl) {
+              newsItem += '<img src="' + imgUrl + '" alt="' + title + '">';
+            }
+            newsItem += '<p class="descripcion">' + descripcionCortada + '</p>';
+            newsItem += '<a class="leer-mas" href="' + link + '" target="_blank">Llegir més</a>';
+            newsItem += '</div>';
+            $('#noticias').append(newsItem);
+          });
+        });
+      }
+
+      // Función para realizar la búsqueda
+      function buscar() {
+        var palabra = $('#search-input').val().toLowerCase();
+        $('#search-results').empty(); // Vaciar resultados anteriores
+
+        // Buscar en cada noticia
+        $('.noticia').each(function() {
+          var contenido = $(this).find('.descripcion').text().toLowerCase();
+          if (contenido.includes(palabra)) {
+            // Si la noticia contiene la palabra buscada, añadir a los resultados
+            var titulo = $(this).find('h2').text();
+            var enlace = $(this).find('a').attr('href');
+            var resultado = '<li><a href="' + enlace + '" target="_blank">' + titulo + '</a></li>';
+            $('#search-results').append(resultado);
+          }
+        });
+
+        // Mostrar resultados y ocultar noticias
+        $('#search-results').show();
+        $('#noticias').hide();
+      }
+
+      // Llamar a la función para cargar y mostrar las noticias
+      cargarNoticias();
+
+      // Event listener para el botón de búsqueda
+      $('#search-button').click(function() {
+        buscar();
+      });
+
+      // Event listener para la tecla "Enter" en la caja de búsqueda
+      $('#search-input').keypress(function(event) {
+        if (event.keyCode === 13) {
+          buscar();
+        }
+      });
+    });
+  </script>
+
+  <script>
+
+// Carrega via Webscraping la imatge del dia 
+          // Función para obtener la imagen del día mediante web scraping
+      function getImageOfDay() {
+        fetch('https://efe.com/foto-del-dia/')
+          .then(response => response.text())
+          .then(data => {
+            // Crear un objeto HTML a partir del texto recibido
+            const parser = new DOMParser();
+            const htmlDocument = parser.parseFromString(data, 'text/html');
+
+            // Utilizar XPath para seleccionar la URL de la imagen del día
+            const imageUrl = htmlDocument.evaluate('string(//div[@class="post-image"]/a/img/@src)', htmlDocument, null,
+              XPathResult.STRING_TYPE, null).stringValue;
+             // Obtener el título de la imagen del día
+            const imageTitle = htmlDocument.evaluate('string(//*[@class="post-image"]/a/img/@alt)', htmlDocument, null,
+              XPathResult.STRING_TYPE, null).stringValue;
+
+            const imageLink = htmlDocument.evaluate('string(//*[@class="post-image"]/a/@href)', htmlDocument, null,
+              XPathResult.STRING_TYPE, null).stringValue;
+
+            // Asignar la URL de la imagen al elemento img
+            const img = document.getElementById('image-of-the-day');
+            img.src = imageUrl;
+
+            // Asignar el título de la imagen al elemento p
+            const title = document.getElementById('image-title');
+            title.textContent = imageTitle;
+         // Asignar el título de la imagen al elemento p
+           
+            const link = document.getElementById('imatge_link');
+            link.href = imageLink;
+
+          })
+          .catch(error => console.error('Error:', error));
+      }
+
+      // Llamar a la función para obtener la imagen del día
+      getImageOfDay();
+</script>
+
+</head>
+<body>
+  <div id="banner">
+  <!-- Capa imatge del dia -->
+   <div class="additional-layer" id="image-layer">
+    <a href="https://efe.com/foto-del-dia/2024-03-27/tiempo-semana-santa-frio/">
+    <img fetchpriority="high" width="900" height="598" src="https://i0.wp.com/efe.com/wp-content/uploads/2024/03/semana-santa-sevilla.jpg?fit=900%2C598&amp;ssl=1" class="attachment-full size-full wp-post-image" alt="Nazareno de la Hermandad del Santísimo Cristo de la Sed de Sevilla, se dirige este miércoles al templo para realizar su Estación de Penitencia." decoding="async" srcset="https://i0.wp.com/efe.com/wp-content/uploads/2024/03/semana-santa-sevilla.jpg?w=900&amp;ssl=1 900w, https://i0.wp.com/efe.com/wp-content/uploads/2024/03/semana-santa-sevilla.jpg?resize=300%2C199&amp;ssl=1 300w, https://i0.wp.com/efe.com/wp-content/uploads/2024/03/semana-santa-sevilla.jpg?resize=768%2C510&amp;ssl=1 768w, https://i0.wp.com/efe.com/wp-content/uploads/2024/03/semana-santa-sevilla.jpg?resize=430%2C286&amp;ssl=1 430w" sizes="(max-width: 900px) 100vw, 900px " style="width: 100%; height: 100%; object-fit: cover;">
+    <p id="image-title">Títol de la imatge</p>
+    </a> 
+    </div>
+
+    <div id="search-container">
+      <input type="text" id="search-input" placeholder="Introdueix la paraula de cerca">
+      <button id="search-button">&#128269;</button>
+    </div>
+    <div id="nom">
+    <h1>Noticies al minut</h1>
+    <h2>Diari Ara</h2>
+    </div>
+  </div>
+
+  <!-- Capa per mostrar els resultats de la cerca -->
+  <div id="search-results">
+    <h2>Resultats de la cerca:</h2>
+    <ul></ul>
+  </div>
+  <!-- Capa mostra Cotitzacions cruptomonedes -->
+  <div id="marquee">
+    <marquee id="cryptoTicker" onmouseover="this.stop();" onmouseout="this.start();" id='scroll'> Cotitzacions criptomonedes 
+    </marquee>          
+    </div>
+    <div id="loader"></div>
+
+    <div class="container" id="noticiasContainer"></div>
+     
+    <script>
+        // Mostrar indicador de carga
+        const loader = document.getElementById("loader");
+        loader.style.display = "block";
+    
+        // URL del feed RSS
+        const rssUrl = "https://www.ara.cat/rss/";
+    
+        // Función para cargar y mostrar las noticias
+        async function cargarNoticias() {
+            try {
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`);
+                const data = await response.json();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+                const items = xmlDoc.querySelectorAll("item");
+    
+                const noticiasContainer = document.getElementById("noticiasContainer");
+    
+                items.forEach((item, index) => {
+                    if (index % 3 === 0) {
+                        // Crear una nueva fila
+                        const row = document.createElement("div");
+                        row.className = "container";
+                        noticiasContainer.appendChild(row);
+                    }
+    
+                    // Crear la estructura de la noticia
+                    const noticiaDiv = document.createElement("div");
+                    noticiaDiv.className = "noticia";
+                    
+                    const titulo = item.querySelector("title").textContent;
+                    const enlace = item.querySelector("link").textContent;
+                    const descripcion = item.querySelector("description").textContent;
+                    const match = descripcion.match(/<img.*?src="(.*?)"/);
+                    const imagen = match ? match[1] : null;
+    
+                    const tituloElement = document.createElement("h2");
+                    tituloElement.textContent = titulo;
+    
+                    if (imagen) {
+                        const imagenElement = document.createElement("img");
+                        imagenElement.src = imagen;
+                        noticiaDiv.appendChild(imagenElement);
+                    }
+    
+                    const descripcionElement = document.createElement("p");
+                    descripcionElement.textContent = stripHtml(descripcion).substring(0, 100) + '...'; // Eliminar etiquetas HTML y luego limitar a 100 caracteres
+    
+                    // Añadir los elementos a la noticia
+                    noticiaDiv.appendChild(tituloElement);
+                    noticiaDiv.appendChild(descripcionElement);
+    
+                    // Añadir la noticia al contenedor
+                    const currentContainer = noticiasContainer.lastElementChild || noticiasContainer;
+                    currentContainer.appendChild(noticiaDiv);
+                });
+    
+                // Ocultar indicador de carga
+                loader.style.display = "none";
+            } catch (error) {
+                console.error("Error al cargar las noticias:", error);
+                // En caso de error, ocultar indicador de carga
+                loader.style.display = "none";
+            }
+        }
+    
+        // Función para eliminar etiquetas HTML de una cadena de texto
+        function stripHtml(html) {
+            const temporalDivElement = document.createElement("div");
+            temporalDivElement.innerHTML = html;
+            return temporalDivElement.textContent || temporalDivElement.innerText || "";
+        }
+    
+        // Cargar las noticias al cargar la página
+        window.onload = cargarNoticias;
+    </script>
+<!-- Footer -->
+<div id="peu">
+  <footer>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <ul class="footer-links">
+            <li><a href="#banner">Inici</a></li>
+            <li><a href="#">Noticies</a></li>
+            <li><a href="#">Podcast</a></li>
+            <li><a href="#">Contactes</a></li>
+            <li><a href="#">API</a></li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <ul class="social-icons">
+            <li><a href="#"><i class="fab fa-facebook"></i></a></li>
+            <li><a href="#"><i class="fab fa-twitter"></i></a></li>
+            <li><a href="#"><i class="fab fa-instagram"></i></a></li>
+            <li><a href="#"><i class="fab fa-linkedin"></i></a></li>
+            <li><a href="#"><i class="fas fa-rss"></i></a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <span id="autor">(c) 2024 Noticies al minut<br/>
+          Avís Legal / Política de Privacitat / Política de Cookies / Preferencias de Privacidad / Tel: 123 45 57 89
+          </span>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+
+
+  <!-- Bootstrap JS -->
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script >
+// Codi per llegir dades Cryptomonedes i mostrar amb desplaçament 
+
+       // Función para realizar la solicitud a la API de Binance
+        function fetchCryptoPrices() {
+            const topCryptos = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'ADAUSDT', 'XRPUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'LUNAUSDT'];
+            fetch('https://api.binance.com/api/v3/ticker/price')
+            .then(response => response.json())
+            .then(data => {
+                const cryptoTicker = document.getElementById('marquee');
+                let moneda = ""; 
+
+                // Recorrer los datos de la respuesta JSON
+                data.forEach(crypto => {
+                    const symbol0 = crypto.symbol;
+                    const price0 = crypto.price;
+                    const price = parseFloat(price0).toString();
+                    
+                    // Verificar si el símbolo está en la lista de las 10 principales criptomonedas
+                    if (topCryptos.includes(symbol0)) {
+                        // Crear un elemento para cada criptomoneda y precio
+                        const symbol = symbol0.replace(/USDT$/, ""); // Eliminar los últimos 4 caracteres (USDT)
+                        moneda += `<strong>${symbol}</strong>: ${price} &emsp; &emsp; `; // Concatenar el contenido
+                    }
+                });
+
+                const mostra = `<marquee onmouseover="this.stop();" onmouseout="this.start();" id="scroll">${moneda}</marquee>`; 
+
+                // Insertar el contenido HTML dentro del marquee
+                cryptoTicker.innerHTML = mostra;  
+                
+            })
+            .catch(error => {
+                console.error('Error al recuperar los datos:', error);
+            });
+        }
+
+        // Llamar a la función al cargar la página
+        fetchCryptoPrices();
+
+        // Actualizar las cotizaciones cada X segundos
+        setInterval(fetchCryptoPrices, 20000); // Cambiar 20000 por el intervalo deseado en milisegundos
+    </script> 
+
+
+
+
+</body>
+</html>
